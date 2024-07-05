@@ -88,7 +88,9 @@
         "__errc": "cpp",
         "__locale": "cpp",
         "__verbose_abort": "cpp",
-        "ios": "cpp"
+        "ios": "cpp",
+        "span": "cpp",
+        "queue": "cpp"
     },
     "cmake.configureOnOpen": false
 }
