@@ -6,11 +6,11 @@
 #include <boost/program_options.hpp>
 #include <chrono>
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
-#include <filesystem>
 
 #include "efanna2e/distance.h"
 #include "efanna2e/neighbor.h"
@@ -20,14 +20,15 @@
 
 namespace po = boost::program_options;
 
-float ComputeRecall(uint32_t q_num, uint32_t k, uint32_t gt_dim, uint32_t *res, uint32_t *gt) {
+float ComputeRecall(uint32_t q_num, uint32_t k, uint32_t gt_dim, uint32_t* res, uint32_t* gt) {
     uint32_t total_count = 0;
     for (uint32_t i = 0; i < q_num; i++) {
         std::vector<uint32_t> one_gt(gt + i * gt_dim, gt + i * gt_dim + k);
         std::vector<uint32_t> intersection;
         std::vector<uint32_t> temp_res(res + i * k, res + i * k + k);
         for (auto p : one_gt) {
-            if (std::find(temp_res.begin(), temp_res.end(), p) != temp_res.end()) intersection.push_back(p);
+            if (std::find(temp_res.begin(), temp_res.end(), p) != temp_res.end())
+                intersection.push_back(p);
         }
 
         total_count += static_cast<uint32_t>(intersection.size());
@@ -48,7 +49,7 @@ double ComputeRderr(float* gt_dist, uint32_t gt_dim, std::vector<std::vector<flo
             }
         } else if (metric == efanna2e::COSINE) {
             for (size_t j = 0; j < k; ++j) {
-                temp_res[j] = 2.0 * ( 1.0 - (-1.0 * temp_res[j]));
+                temp_res[j] = 2.0 * (1.0 - (-1.0 * temp_res[j]));
             }
         }
         double err = 0.0;
@@ -61,7 +62,7 @@ double ComputeRderr(float* gt_dist, uint32_t gt_dim, std::vector<std::vector<flo
     return total_err / static_cast<double>(q_num);
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     std::string base_data_file;
     std::string query_file;
     std::string sampled_query_data_file;
@@ -111,7 +112,7 @@ int main(int argc, char **argv) {
             return 0;
         }
         po::notify(vm);
-    } catch (const std::exception &ex) {
+    } catch (const std::exception& ex) {
         std::cerr << ex.what() << '\n';
         return -1;
     }
@@ -127,13 +128,13 @@ int main(int argc, char **argv) {
     omp_set_num_threads(num_threads);
     uint32_t q_pts, q_dim;
     efanna2e::load_meta<float>(query_file.c_str(), q_pts, q_dim);
-    float *query_data = nullptr;
+    float* query_data = nullptr;
     efanna2e::load_data<float>(query_file.c_str(), q_pts, q_dim, query_data);
-    float *aligned_query_data = efanna2e::data_align(query_data, q_pts, q_dim);
+    float* aligned_query_data = efanna2e::data_align(query_data, q_pts, q_dim);
 
     uint32_t gt_pts, gt_dim;
-    uint32_t *gt_ids = nullptr;
-    float *gt_dists = nullptr;
+    uint32_t* gt_ids = nullptr;
+    float* gt_dists = nullptr;
     efanna2e::load_gt_meta<uint32_t>(gt_file.c_str(), gt_pts, gt_dim);
     // efanna2e::load_gt_data<uint32_t>(gt_file.c_str(), gt_pts, gt_dim, gt_ids);
     efanna2e::load_gt_data_with_dist<uint32_t, float>(gt_file.c_str(), gt_pts, gt_dim, gt_ids, gt_dists);
@@ -174,13 +175,13 @@ int main(int argc, char **argv) {
 
     // Search
     std::cout << "k: " << k << std::endl;
-    uint32_t *res = new uint32_t[q_pts * k];
+    uint32_t* res = new uint32_t[q_pts * k];
     memset(res, 0, sizeof(uint32_t) * q_pts * k);
     std::vector<std::vector<float>> res_dists(q_pts, std::vector<float>(k, 0.0));
-    uint32_t *projection_cmps_vec = (uint32_t *)aligned_alloc(4, sizeof(uint32_t) * q_pts);
+    uint32_t* projection_cmps_vec = (uint32_t*)aligned_alloc(4, sizeof(uint32_t) * q_pts);
     memset(projection_cmps_vec, 0, sizeof(uint32_t) * q_pts);
-    uint32_t *hops_vec = (uint32_t *)aligned_alloc(4, sizeof(uint32_t) * q_pts);
-    float *projection_latency_vec = (float *)aligned_alloc(4, sizeof(float) * q_pts);
+    uint32_t* hops_vec = (uint32_t*)aligned_alloc(4, sizeof(uint32_t) * q_pts);
+    float* projection_latency_vec = (float*)aligned_alloc(4, sizeof(float) * q_pts);
     memset(projection_latency_vec, 0, sizeof(float) * q_pts);
     std::ofstream evaluation_out;
     if (!evaluation_save_path.empty()) {
@@ -188,26 +189,52 @@ int main(int argc, char **argv) {
     }
     std::cout << "Using thread: " << num_threads << std::endl;
     std::cout << "L_pq" << "\t\tQPS" << "\t\t\tavg_visited" << "\tmean_latency" << "\trecall@" << k << "\tavg_hops" << std::endl;
+    if (evaluation_out.is_open()) {
+        evaluation_out << "L_pq,QPS,avg_visited,mean_latency,recall@" << k << ",avg_hops" << std::endl;
+    }
     for (uint32_t L_pq : L_vec) {
         if (k > L_pq) {
             std::cout << "L_pq must greater or equal than k" << std::endl;
             exit(1);
         }
         parameters.Set<uint32_t>("L_pq", L_pq);
-        //pre test good
+        // pre test good
         for (size_t i = 0; i < 100; ++i) {
             index.SearchRoarGraph(aligned_query_data + i * q_dim, k, i, parameters, res + i * k, res_dists[i]);
         }
+
+        std::vector<std::vector<uint32_t>> paths(q_pts);  // new add
         // record the search time
         auto start = std::chrono::high_resolution_clock::now();
 #pragma omp parallel for schedule(dynamic, 1)
         for (size_t i = 0; i < q_pts; ++i) {
-            auto ret_val = index.SearchRoarGraph(aligned_query_data + i * q_dim, k, i, parameters, res + i * k, res_dists[i]);
+            std::vector<uint32_t> ids;
+            // auto ret_val = index.SearchRoarGraph(aligned_query_data + i * q_dim, k, i, parameters, res + i * k, res_dists[i]);
+            auto ret_val = index.SearchGraphIDS(aligned_query_data + i * q_dim, k, i, parameters, res + i * k, res_dists[i], ids);  // new add
+            std::vector<uint32_t>().swap(paths[i]);  // new add
+            paths[i].swap(ids); // new add
             projection_cmps_vec[i] = ret_val.first;
             hops_vec[i] = ret_val.second;
-
         }
         auto end = std::chrono::high_resolution_clock::now();
+
+        std::string filePath = "/root/pytest/data/t2i/paths_output_" + std::to_string(L_pq) + ".csv";
+        std::ofstream outFile(filePath, std::ios::out);  // new add
+        // 检查文件是否成功打开
+        if (!outFile) {
+            std::cerr << "无法打开文件进行写入。" << std::endl;
+            return 1;  // 返回错误代码
+        }
+        // 将内容写入文件
+        for (const auto& innerVector : paths) {
+            for (const auto& value : innerVector) {
+                outFile << value << ",";  // 用空格分隔
+            }
+            outFile << std::endl;  // 每个子向量后换行
+        }
+        // 关闭文件
+        outFile.close();
+        std::cout << "数据写入" << filePath << "文件成功！" << std::endl;  // new add
 
         auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
         float qps = (float)q_pts / ((float)diff / 1000.0);

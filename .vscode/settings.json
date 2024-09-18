@@ -90,7 +90,12 @@
         "__verbose_abort": "cpp",
         "ios": "cpp",
         "span": "cpp",
-        "queue": "cpp"
+        "queue": "cpp",
+        "any": "cpp",
+        "codecvt": "cpp",
+        "future": "cpp",
+        "numbers": "cpp",
+        "semaphore": "cpp"
     },
     "cmake.configureOnOpen": false
 }

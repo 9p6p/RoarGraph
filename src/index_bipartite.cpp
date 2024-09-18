@@ -8,12 +8,12 @@
 #include <tsl/robin_map.h>
 #include <tsl/robin_set.h>
 
+#include <atomic>
 #include <bitset>
 #include <boost/dynamic_bitset.hpp>
 #include <chrono>
 #include <ctime>
 #include <random>
-#include <atomic>
 #include <utility>
 
 #include "efanna2e/exceptions.h"
@@ -27,7 +27,7 @@
 
 namespace efanna2e {
 
-IndexBipartite::IndexBipartite(const size_t dimension, const size_t n, Metric m, Index *initializer)
+IndexBipartite::IndexBipartite(const size_t dimension, const size_t n, Metric m, Index* initializer)
     : Index(dimension, n, m), initializer_{initializer}, total_pts_const_(n) {
     bipartite_ = true;
     l2_distance_ = new DistanceL2();
@@ -39,9 +39,8 @@ IndexBipartite::IndexBipartite(const size_t dimension, const size_t n, Metric m,
 
 IndexBipartite::~IndexBipartite() {}
 
-void IndexBipartite::BuildBipartite(size_t n_sq, const float *sq_data, size_t n_bp, const float *bp_data,
-                                    const Parameters &parameters) {
-   std::cout << "start build bipartite index" << std::endl;
+void IndexBipartite::BuildBipartite(size_t n_sq, const float* sq_data, size_t n_bp, const float* bp_data, const Parameters& parameters) {
+    std::cout << "start build bipartite index" << std::endl;
     auto s = std::chrono::high_resolution_clock::now();
     uint32_t M_sq = parameters.Get<uint32_t>("M_sq");
     uint32_t M_bp = parameters.Get<uint32_t>("M_bp");
@@ -71,7 +70,7 @@ void IndexBipartite::BuildBipartite(size_t n_sq, const float *sq_data, size_t n_
     if (need_normalize) {
         std::cout << "normalizing base data" << std::endl;
         for (size_t i = 0; i < nd_; ++i) {
-            float *data = const_cast<float *>(data_bp_);
+            float* data = const_cast<float*>(data_bp_);
             normalize(data + i * dimension_, dimension_);
         }
     }
@@ -82,7 +81,6 @@ void IndexBipartite::BuildBipartite(size_t n_sq, const float *sq_data, size_t n_
     size_t projection_degree_max = 0, projection_degree_min = std::numeric_limits<size_t>::max();
 
     size_t i = 0;
-
 
     supply_nbrs_.resize(nd_);
 
@@ -103,7 +101,7 @@ void IndexBipartite::BuildBipartite(size_t n_sq, const float *sq_data, size_t n_
     std::cout << "Build projection graph time: " << diff.count() / (1000 * 1000 * 1000) << std::endl;
 
     for (i = 0; i < projection_graph_.size(); ++i) {
-        std::vector<uint32_t> &nbrs = projection_graph_[i];
+        std::vector<uint32_t>& nbrs = projection_graph_[i];
         projection_degree_avg += static_cast<float>(nbrs.size());
         projection_degree_max = std::max(projection_degree_max, nbrs.size());
         projection_degree_min = std::min(projection_degree_min, nbrs.size());
@@ -117,7 +115,7 @@ void IndexBipartite::BuildBipartite(size_t n_sq, const float *sq_data, size_t n_
     float max_degree_nd = 0, min_degree_nd = std::numeric_limits<float>::max(), avg_degree_nd = 0;
     float max_degree_nd_sq = 0, min_degree_nd_sq = std::numeric_limits<float>::max(), avg_degree_nd_sq = 0;
     for (size_t i = 0; i < bipartite_graph_.size(); ++i) {
-        auto &nbrs = bipartite_graph_[i];
+        auto& nbrs = bipartite_graph_[i];
         if (i < nd_) {
             max_degree_nd = std::max(max_degree_nd, static_cast<float>(nbrs.size()));
             min_degree_nd = std::min(min_degree_nd, static_cast<float>(nbrs.size()));
@@ -140,8 +138,7 @@ void IndexBipartite::BuildBipartite(size_t n_sq, const float *sq_data, size_t n_
     has_built = true;
 }
 
-void IndexBipartite::BuildRoarGraph(size_t n_sq, const float *sq_data, size_t n_bp, const float *bp_data,
-                                    const Parameters &parameters) {
+void IndexBipartite::BuildRoarGraph(size_t n_sq, const float* sq_data, size_t n_bp, const float* bp_data, const Parameters& parameters) {
     std::cout << "start build bipartite index" << std::endl;
     auto s = std::chrono::high_resolution_clock::now();
     uint32_t M_sq = parameters.Get<uint32_t>("M_sq");
@@ -176,11 +173,10 @@ void IndexBipartite::BuildRoarGraph(size_t n_sq, const float *sq_data, size_t n_
     if (need_normalize) {
         std::cout << "normalizing base data" << std::endl;
         for (size_t i = 0; i < nd_; ++i) {
-            float *data = const_cast<float *>(data_bp_);
+            float* data = const_cast<float*>(data_bp_);
             normalize(data + i * dimension_, dimension_);
         }
     }
-
 
     float bipartite_degree_avg = 0;
     size_t bipartite_degree_max = 0, bipartite_degree_min = std::numeric_limits<size_t>::max();
@@ -219,7 +215,7 @@ void IndexBipartite::BuildRoarGraph(size_t n_sq, const float *sq_data, size_t n_
     std::cout << "Build projection graph time: " << diff.count() / (1000 * 1000 * 1000) << std::endl;
 
     for (i = 0; i < projection_graph_.size(); ++i) {
-        std::vector<uint32_t> &nbrs = projection_graph_[i];
+        std::vector<uint32_t>& nbrs = projection_graph_[i];
         projection_degree_avg += static_cast<float>(nbrs.size());
         projection_degree_max = std::max(projection_degree_max, nbrs.size());
         projection_degree_min = std::min(projection_degree_min, nbrs.size());
@@ -232,7 +228,7 @@ void IndexBipartite::BuildRoarGraph(size_t n_sq, const float *sq_data, size_t n_
     has_built = true;
 }
 
-void IndexBipartite::qbaseNNbipartite(const Parameters &parameters) {
+void IndexBipartite::qbaseNNbipartite(const Parameters& parameters) {
     uint32_t M_pjbp = parameters.Get<uint32_t>("M_pjbp");
     uint32_t L_pjpq = parameters.Get<uint32_t>("L_pjpq");
 
@@ -253,7 +249,7 @@ void IndexBipartite::qbaseNNbipartite(const Parameters &parameters) {
     for (uint32_t it_sq = 0; it_sq < u32_nd_sq_; ++it_sq) {
         uint32_t sq = vis_order_sq[it_sq];
 
-        auto &nn_base = learn_base_knn_[sq];
+        auto& nn_base = learn_base_knn_[sq];
         if (nn_base.size() > M_pjbp) {
             nn_base.resize(M_pjbp);
             nn_base.shrink_to_fit();
@@ -276,11 +272,9 @@ void IndexBipartite::qbaseNNbipartite(const Parameters &parameters) {
                       << std::flush;
         }
     }
-
 }
 
-std::pair<uint32_t, uint32_t> IndexBipartite::SearchBipartiteGraph(const float *query, size_t k, size_t &qid, const Parameters &parameters,
-                                              unsigned *indices, std::vector<float>& dists) {
+std::pair<uint32_t, uint32_t> IndexBipartite::SearchBipartiteGraph(const float* query, size_t k, size_t& qid, const Parameters& parameters, unsigned* indices, std::vector<float>& dists) {
     uint32_t L_pq = parameters.Get<uint32_t>("L_pq");
     NeighborPriorityQueue search_queue(L_pq);
     search_queue.reserve(L_pq);
@@ -292,13 +286,13 @@ std::pair<uint32_t, uint32_t> IndexBipartite::SearchBipartiteGraph(const float *
         uint32_t start = dis(gen);  // start is base
         init_ids.push_back(start);
     }
-    
-    VisitedList *vl = visited_list_pool_->getFreeVisitedList();
-    vl_type *visited_array = vl->mass;
+
+    VisitedList* vl = visited_list_pool_->getFreeVisitedList();
+    vl_type* visited_array = vl->mass;
     vl_type visited_array_tag = vl->curV;
 
     // block_metric.record();
-    for (auto &id : init_ids) {
+    for (auto& id : init_ids) {
         float distance;
         // dist_cmp_metric.reset();
         distance = distance_->compare(data_bp_ + id * dimension_, query, (unsigned)dimension_);
@@ -322,7 +316,7 @@ std::pair<uint32_t, uint32_t> IndexBipartite::SearchBipartiteGraph(const float *
             continue;
         }
         for (auto nbr : bipartite_graph_[cur_id]) {  // current check node's neighbors
-            
+
             for (auto ns_nbr : bipartite_graph_[nbr]) {  // neighbors' neighbors
                 if (visited_array[ns_nbr] == visited_array_tag) {
                     continue;
@@ -355,13 +349,12 @@ std::pair<uint32_t, uint32_t> IndexBipartite::SearchBipartiteGraph(const float *
     return std::make_pair(cmps, hops);
 }
 
-void IndexBipartite::LinkOneNode(const Parameters &parameters, uint32_t nid, SimpleNeighbor *simple_graph, bool is_base,
-                                 boost::dynamic_bitset<> &visited) {
+void IndexBipartite::LinkOneNode(const Parameters& parameters, uint32_t nid, SimpleNeighbor* simple_graph, bool is_base, boost::dynamic_bitset<>& visited) {
     uint32_t M_sq = parameters.Get<uint32_t>("M_sq");
     uint32_t M_bp = parameters.Get<uint32_t>("M_bp");
     uint32_t L_pq = parameters.Get<uint32_t>("L_pq");
 
-    const float *cur_data = is_base ? data_bp_ : data_sq_;
+    const float* cur_data = is_base ? data_bp_ : data_sq_;
     uint32_t global_id = is_base ? nid : u32_nd_ + nid;
     // std::vector<Neighbor> retset;
     NeighborPriorityQueue search_queue(L_pq);
@@ -442,7 +435,7 @@ void IndexBipartite::LinkOneNode(const Parameters &parameters, uint32_t nid, Sim
     }
 }
 
-void IndexBipartite::LinkBipartite(const Parameters &parameters, SimpleNeighbor *simple_graph) {
+void IndexBipartite::LinkBipartite(const Parameters& parameters, SimpleNeighbor* simple_graph) {
     // uint32_t M_sq = parameters.Get<uint32_t>("M_sq");
     uint32_t M_bp = parameters.Get<uint32_t>("M_bp");
     // uint32_t L_pq = parameters.Get<uint32_t>("L_pq");
@@ -526,8 +519,7 @@ void IndexBipartite::LinkBipartite(const Parameters &parameters, SimpleNeighbor 
     }
 }
 
-void IndexBipartite::PruneCandidates(std::vector<Neighbor> &search_pool, uint32_t tgt_id, const Parameters &parameters,
-                                     std::vector<uint32_t> &pruned_list, boost::dynamic_bitset<> &visited) {
+void IndexBipartite::PruneCandidates(std::vector<Neighbor>& search_pool, uint32_t tgt_id, const Parameters& parameters, std::vector<uint32_t>& pruned_list, boost::dynamic_bitset<>& visited) {
     // uint32_t L_pq = parameters.Get<uint32_t>("L_pq");
     uint32_t M_sq = parameters.Get<uint32_t>("M_sq");
     uint32_t M_bp = parameters.Get<uint32_t>("M_bp");
@@ -544,7 +536,7 @@ void IndexBipartite::PruneCandidates(std::vector<Neighbor> &search_pool, uint32_
         if (pruned_list.size() >= (size_t)degree_bound) {
             break;
         }
-        auto &node = search_pool[i];
+        auto& node = search_pool[i];
         auto id = node.id;
         if (!reachable_flags.test(id)) {
             reachable_flags.set(id);
@@ -571,9 +563,7 @@ void IndexBipartite::PruneCandidates(std::vector<Neighbor> &search_pool, uint32_
     }
 }
 
-void IndexBipartite::AddReverse(NeighborPriorityQueue &search_pool, uint32_t src_node,
-                                std::vector<uint32_t> &pruned_list, const Parameters &parameters,
-                                boost::dynamic_bitset<> &visited) {
+void IndexBipartite::AddReverse(NeighborPriorityQueue& search_pool, uint32_t src_node, std::vector<uint32_t>& pruned_list, const Parameters& parameters, boost::dynamic_bitset<>& visited) {
     uint32_t L_pq = parameters.Get<uint32_t>("L_pq");
     uint32_t M_sq = parameters.Get<uint32_t>("M_sq");
     uint32_t M_bp = parameters.Get<uint32_t>("M_bp");
@@ -604,8 +594,8 @@ void IndexBipartite::AddReverse(NeighborPriorityQueue &search_pool, uint32_t src
         if (need_prune) {
             // if is_base, copy_vec is base vec
             // else copy_vec is query vec
-            const float *cur_data = is_base ? data_bp_ : data_sq_;
-            const float *opposite_data = is_base ? data_sq_ : data_bp_;
+            const float* cur_data = is_base ? data_bp_ : data_sq_;
+            const float* opposite_data = is_base ? data_sq_ : data_bp_;
             // simulate search pool
             // NeighborPriorityQueue simulate_pool;
             std::vector<Neighbor> simulate_pool;
@@ -634,9 +624,7 @@ void IndexBipartite::AddReverse(NeighborPriorityQueue &search_pool, uint32_t src
 }
 
 // search by base, return query
-void IndexBipartite::SearchBipartitebyBase(const float *query, uint32_t gid, const Parameters &parameters,
-                                           SimpleNeighbor *simple_graph, NeighborPriorityQueue &queue,
-                                           boost::dynamic_bitset<> &visited, std::vector<Neighbor> &full_retset) {
+void IndexBipartite::SearchBipartitebyBase(const float* query, uint32_t gid, const Parameters& parameters, SimpleNeighbor* simple_graph, NeighborPriorityQueue& queue, boost::dynamic_bitset<>& visited, std::vector<Neighbor>& full_retset) {
     uint32_t M_sq = parameters.Get<uint32_t>("M_sq");
     // uint32_t M_bp = parameters.Get<uint32_t>("M_bp");
     // uint32_t L_pq = parameters.Get<uint32_t>("L_pq");
@@ -668,7 +656,7 @@ void IndexBipartite::SearchBipartitebyBase(const float *query, uint32_t gid, con
                       << "sq_en_set_ size(): " << sq_en_set_.size() << std::endl;
             // print sq_en_set_
             // std::cout << *(std::next(sq_en_set_.begin(), advance)) << std::endl;
-            for (auto &i : sq_en_set_) {
+            for (auto& i : sq_en_set_) {
                 std::cout << i << " ";
             }
             exit(1);
@@ -773,9 +761,7 @@ void IndexBipartite::SearchBipartitebyBase(const float *query, uint32_t gid, con
 }
 
 // search by query, return base
-void IndexBipartite::SearchBipartitebyQuery(const float *query, uint32_t gid, const Parameters &parameters,
-                                            SimpleNeighbor *simple_graph, NeighborPriorityQueue &queue,
-                                            boost::dynamic_bitset<> &visited, std::vector<Neighbor> &full_retset) {
+void IndexBipartite::SearchBipartitebyQuery(const float* query, uint32_t gid, const Parameters& parameters, SimpleNeighbor* simple_graph, NeighborPriorityQueue& queue, boost::dynamic_bitset<>& visited, std::vector<Neighbor>& full_retset) {
     // uint32_t M_sq = parameters.Get<uint32_t>("M_sq");
     uint32_t M_bp = parameters.Get<uint32_t>("M_bp");
     // uint32_t L_pq = parameters.Get<uint32_t>("L_pq");
@@ -814,7 +800,7 @@ void IndexBipartite::SearchBipartitebyQuery(const float *query, uint32_t gid, co
         init_ids.push_back(dis(gen));
     }
 
-    for (auto &id : init_ids) {
+    for (auto& id : init_ids) {
         float distance;
 
         distance = distance_->compare(data_bp_ + id * dimension_, query, (unsigned)dimension_);
@@ -889,7 +875,7 @@ void IndexBipartite::SearchBipartitebyQuery(const float *query, uint32_t gid, co
     }
 }
 
-void IndexBipartite::PruneLocalJoinCandidates(uint32_t node, const Parameters &parameters, uint32_t candi) {
+void IndexBipartite::PruneLocalJoinCandidates(uint32_t node, const Parameters& parameters, uint32_t candi) {
     uint32_t M_pjbp = parameters.Get<uint32_t>("M_pjbp");
 
     NeighborPriorityQueue search_pool;
@@ -916,7 +902,7 @@ void IndexBipartite::PruneLocalJoinCandidates(uint32_t node, const Parameters &p
     ++start;
 
     while (result.size() < M_pjbp && (++start) < search_pool.size()) {
-        Neighbor &p = search_pool[start];
+        Neighbor& p = search_pool[start];
         bool occlude = false;
         for (size_t t = 0; t < result.size(); ++t) {
             if (p.id == result[t]) {
@@ -948,7 +934,7 @@ void IndexBipartite::PruneLocalJoinCandidates(uint32_t node, const Parameters &p
     }
 }
 
-void IndexBipartite::BipartiteProjectionReserveSpace(const Parameters &parameters) {
+void IndexBipartite::BipartiteProjectionReserveSpace(const Parameters& parameters) {
     std::cout << "begin projection graph init" << std::endl;
     uint32_t M_pjbp = parameters.Get<uint32_t>("M_pjbp");
     projection_graph_.resize(u32_nd_);
@@ -957,7 +943,7 @@ void IndexBipartite::BipartiteProjectionReserveSpace(const Parameters &parameter
     }
 }
 
-void IndexBipartite::TrainingLink2Projection(const Parameters &parameters, SimpleNeighbor *simple_graph) {
+void IndexBipartite::TrainingLink2Projection(const Parameters& parameters, SimpleNeighbor* simple_graph) {
     uint32_t M_pjbp = parameters.Get<uint32_t>("M_pjbp");
     uint32_t L_pjpq = parameters.Get<uint32_t>("L_pjpq");
     omp_set_num_threads(parameters.Get<uint32_t>("num_threads"));
@@ -970,11 +956,11 @@ void IndexBipartite::TrainingLink2Projection(const Parameters &parameters, Simpl
         vis_order_sq.push_back(i);
     }
 
-    #pragma omp parallel for schedule(static, 100)
+#pragma omp parallel for schedule(static, 100)
     for (uint32_t it_sq = 0; it_sq < u32_nd_sq_; ++it_sq) {
         uint32_t sq = vis_order_sq[it_sq];
         // boost::dynamic_bitset<> visited{u32_total_pts_, false};
-        auto &nn_base = learn_base_knn_[sq];
+        auto& nn_base = learn_base_knn_[sq];
         if (nn_base.size() > 100) {
             nn_base.resize(100);
             nn_base.shrink_to_fit();
@@ -1040,7 +1026,7 @@ void IndexBipartite::TrainingLink2Projection(const Parameters &parameters, Simpl
     }
 }
 
-void IndexBipartite::LinkProjection(const Parameters &parameters) {
+void IndexBipartite::LinkProjection(const Parameters& parameters) {
     uint32_t M_pjbp = parameters.Get<uint32_t>("M_pjbp");
     uint32_t L_pjpq = parameters.Get<uint32_t>("L_pjpq");
     uint32_t Nq = parameters.Get<uint32_t>("M_sq");
@@ -1060,7 +1046,7 @@ void IndexBipartite::LinkProjection(const Parameters &parameters) {
     for (uint32_t it_sq = 0; it_sq < u32_nd_sq_; ++it_sq) {
         uint32_t sq = vis_order_sq[it_sq];
 
-        auto &nn_base = learn_base_knn_[sq];
+        auto& nn_base = learn_base_knn_[sq];
         if (nn_base.size() > Nq) {
             nn_base.resize(Nq);
             nn_base.shrink_to_fit();
@@ -1102,7 +1088,6 @@ void IndexBipartite::LinkProjection(const Parameters &parameters) {
         uint32_t node = vis_order[i];
         ProjectionAddReverse(node, parameters);
     }
-
 
 #pragma omp parallel for schedule(static, 2048)
     for (uint32_t i = 0; i < vis_order.size(); ++i) {
@@ -1276,10 +1261,7 @@ void IndexBipartite::LinkProjection(const Parameters &parameters) {
     std::cout << "Connectivity enhancement time: " << connectivity_enhancement_time << std::endl;
 }
 
-void IndexBipartite::SearchProjectionGraphInternal(NeighborPriorityQueue &search_queue, const float *query,
-                                                   uint32_t tgt, const Parameters &parameters,
-                                                   boost::dynamic_bitset<> &visited,
-                                                   std::vector<Neighbor> &full_retset) {
+void IndexBipartite::SearchProjectionGraphInternal(NeighborPriorityQueue& search_queue, const float* query, uint32_t tgt, const Parameters& parameters, boost::dynamic_bitset<>& visited, std::vector<Neighbor>& full_retset) {
     uint32_t L_pq = parameters.Get<uint32_t>("L_pjpq");
 
     search_queue.reserve(L_pq);
@@ -1298,7 +1280,7 @@ void IndexBipartite::SearchProjectionGraphInternal(NeighborPriorityQueue &search
     // boost::dynamic_bitset<> visited{u32_nd_, 0};
     // std::bitset<bsize> visited;
     // block_metric.record();
-    for (auto &id : init_ids) {
+    for (auto& id : init_ids) {
         float distance;
         // dist_cmp_metric.reset();
         distance = distance_->compare(data_bp_ + id * dimension_, query, (unsigned)dimension_);
@@ -1349,14 +1331,14 @@ void IndexBipartite::SearchProjectionGraphInternal(NeighborPriorityQueue &search
     }
 }
 
-void IndexBipartite::SupplyAddReverse(uint32_t src_node, const Parameters &parameters) {
+void IndexBipartite::SupplyAddReverse(uint32_t src_node, const Parameters& parameters) {
     uint32_t M_pjbp = parameters.Get<uint32_t>("M_pjbp") * 2;
     // uint32_t M_pjbp = parameters.Get<uint32_t>("M_pjbp");
-    std::vector<uint32_t> &nbrs = supply_nbrs_[src_node];
+    std::vector<uint32_t>& nbrs = supply_nbrs_[src_node];
 
     for (size_t i = 0; i < nbrs.size(); ++i) {
         auto des = nbrs[i];
-        auto &des_nbrs = supply_nbrs_[des];
+        auto& des_nbrs = supply_nbrs_[des];
         bool need_prune = false;
         {
             LockGuard guard(locks_[des]);
@@ -1388,14 +1370,14 @@ void IndexBipartite::SupplyAddReverse(uint32_t src_node, const Parameters &param
     }
 }
 
-void IndexBipartite::ProjectionAddReverse(uint32_t src_node, const Parameters &parameters) {
+void IndexBipartite::ProjectionAddReverse(uint32_t src_node, const Parameters& parameters) {
     uint32_t M_pjbp = parameters.Get<uint32_t>("M_pjbp");
-    std::vector<uint32_t> &nbrs = projection_graph_[src_node];
+    std::vector<uint32_t>& nbrs = projection_graph_[src_node];
     float avg_copy = 0;
-    
+
     for (size_t i = 0; i < nbrs.size(); ++i) {
         auto des = nbrs[i];
-        auto &des_nbrs = projection_graph_[des];
+        auto& des_nbrs = projection_graph_[des];
         bool need_prune = false;
         {
             LockGuard guard(locks_[des]);
@@ -1431,9 +1413,7 @@ void IndexBipartite::ProjectionAddReverse(uint32_t src_node, const Parameters &p
     }
 }
 
-void IndexBipartite::PruneProjectionInternalReverseCandidates(uint32_t src_node, const Parameters &parameters,
-                                                              std::vector<uint32_t> &pruned_list) {
-
+void IndexBipartite::PruneProjectionInternalReverseCandidates(uint32_t src_node, const Parameters& parameters, std::vector<uint32_t>& pruned_list) {
     uint32_t M_pjbp = parameters.Get<uint32_t>("M_pjbp");
     std::vector<Neighbor> prune_queue(pruned_list.size());
     prune_queue.reserve(pruned_list.size());
@@ -1458,7 +1438,7 @@ void IndexBipartite::PruneProjectionInternalReverseCandidates(uint32_t src_node,
     }
     result.push_back(prune_queue[start].id);
     while (result.size() < M_pjbp && (++start) < prune_queue.size()) {
-        auto &p = prune_queue[start];
+        auto& p = prune_queue[start];
         bool occlude = false;
         for (size_t i = 0; i < result.size(); ++i) {
             if (p.id == result[i]) {
@@ -1486,7 +1466,7 @@ void IndexBipartite::PruneProjectionInternalReverseCandidates(uint32_t src_node,
     }
     start = 0;
     while (result.size() < M_pjbp && (++start) < prune_queue.size()) {
-        auto &p = prune_queue[start];
+        auto& p = prune_queue[start];
         bool occlude = false;
         for (size_t i = 0; i < result.size(); ++i) {
             if (p.id == result[i]) {
@@ -1524,8 +1504,7 @@ void IndexBipartite::PruneProjectionInternalReverseCandidates(uint32_t src_node,
     pruned_list = result;
 }
 
-void IndexBipartite::PruneProjectionReverseCandidates(uint32_t src_node, const Parameters &parameters,
-                                                      std::vector<uint32_t> &pruned_list) {
+void IndexBipartite::PruneProjectionReverseCandidates(uint32_t src_node, const Parameters& parameters, std::vector<uint32_t>& pruned_list) {
     uint32_t M_pjbp = parameters.Get<uint32_t>("M_pjbp");
     std::vector<Neighbor> prune_queue;
     prune_queue.reserve(pruned_list.size());
@@ -1547,7 +1526,7 @@ void IndexBipartite::PruneProjectionReverseCandidates(uint32_t src_node, const P
     }
     result.push_back(prune_queue[start].id);
     while (result.size() < M_pjbp && (++start) < prune_queue.size()) {
-        auto &p = prune_queue[start];
+        auto& p = prune_queue[start];
         bool occlude = false;
         for (size_t i = 0; i < result.size(); ++i) {
             if (p.id == result[i]) {
@@ -1570,7 +1549,7 @@ void IndexBipartite::PruneProjectionReverseCandidates(uint32_t src_node, const P
 
     start = 0;
     while (result.size() < M_pjbp && (++start) < prune_queue.size()) {
-        auto &p = prune_queue[start];
+        auto& p = prune_queue[start];
         bool occlude = false;
         for (size_t i = 0; i < result.size(); ++i) {
             if (p.id == result[i]) {
@@ -1609,16 +1588,14 @@ void IndexBipartite::PruneProjectionReverseCandidates(uint32_t src_node, const P
     pruned_list = result;
 }
 
-void IndexBipartite::PruneBiSearchBaseGetBase(std::vector<Neighbor> &search_pool, const float *query, uint32_t tgt_base,
-                                              const Parameters &parameters, std::vector<uint32_t> &pruned_list) {
+void IndexBipartite::PruneBiSearchBaseGetBase(std::vector<Neighbor>& search_pool, const float* query, uint32_t tgt_base, const Parameters& parameters, std::vector<uint32_t>& pruned_list) {
     uint32_t M_pjbp = parameters.Get<uint32_t>("M_pjbp");
     uint32_t L_pjpq = parameters.Get<uint32_t>("L_pjpq");
 
     std::vector<Neighbor> base_pool;
     std::vector<uint32_t> base_id;
 
-
-    for (auto &b_node : search_pool) {
+    for (auto& b_node : search_pool) {
         if (std::find(base_id.begin(), base_id.end(), b_node.id) == base_id.end()) {
             if (b_node.id == tgt_base) {
                 continue;
@@ -1635,7 +1612,7 @@ void IndexBipartite::PruneBiSearchBaseGetBase(std::vector<Neighbor> &search_pool
     result.push_back(base_pool[start].id);
 
     while (result.size() < M_pjbp && (++start) < base_pool.size()) {
-        Neighbor &p = base_pool[start];
+        Neighbor& p = base_pool[start];
         bool occlude = false;
         for (size_t t = 0; t < result.size(); ++t) {
             if (p.id == result[t]) {
@@ -1657,7 +1634,7 @@ void IndexBipartite::PruneBiSearchBaseGetBase(std::vector<Neighbor> &search_pool
 
     start = 0;
     while (result.size() < M_pjbp && (++start) < search_pool.size()) {
-        Neighbor &p = search_pool[start];
+        Neighbor& p = search_pool[start];
         if (std::find(result.begin(), result.end(), p.id) != result.end()) {
             continue;
         }
@@ -1693,9 +1670,7 @@ void IndexBipartite::PruneBiSearchBaseGetBase(std::vector<Neighbor> &search_pool
     pruned_list = result;
 }
 
-uint32_t IndexBipartite::PruneProjectionBipartiteCandidates(std::vector<Neighbor> &search_pool, const float *query,
-                                                            uint32_t qid, const Parameters &parameters,
-                                                            std::vector<uint32_t> &pruned_list) {
+uint32_t IndexBipartite::PruneProjectionBipartiteCandidates(std::vector<Neighbor>& search_pool, const float* query, uint32_t qid, const Parameters& parameters, std::vector<uint32_t>& pruned_list) {
     uint32_t M_pjbp = parameters.Get<uint32_t>("M_pjbp");
 
     uint32_t exp_candidate_len =
@@ -1723,7 +1698,7 @@ uint32_t IndexBipartite::PruneProjectionBipartiteCandidates(std::vector<Neighbor
     result.push_back(candidate_only_id[start]);
 
     while (result.size() < M_pjbp && (++start) < candidate_only_id.size()) {
-        auto &p = candidate_only_id[start];
+        auto& p = candidate_only_id[start];
         float dik = distance_->compare(data_bp_ + dimension_ * p, data_bp_ + dimension_ * src_node, dimension_);
         bool occlude = false;
         for (size_t t = 0; t < result.size(); ++t) {
@@ -1765,8 +1740,7 @@ uint32_t IndexBipartite::PruneProjectionBipartiteCandidates(std::vector<Neighbor
     return src_node;
 }
 
-uint32_t IndexBipartite::PruneProjectionCandidates(std::vector<Neighbor> &search_pool, const float *query, uint32_t qid,
-                                                   const Parameters &parameters, std::vector<uint32_t> &pruned_list) {
+uint32_t IndexBipartite::PruneProjectionCandidates(std::vector<Neighbor>& search_pool, const float* query, uint32_t qid, const Parameters& parameters, std::vector<uint32_t>& pruned_list) {
     uint32_t M_pjbp = parameters.Get<uint32_t>("M_pjbp");
     uint32_t exp_candidate_len = search_pool.size() + bipartite_graph_[u32_nd_ + qid].size();
     std::vector<uint32_t> candidate_only_id;
@@ -1802,7 +1776,7 @@ uint32_t IndexBipartite::PruneProjectionCandidates(std::vector<Neighbor> &search
     result.push_back(pruned_pool[start].id);
 
     while (result.size() < M_pjbp && (++start) < pruned_pool.size()) {
-        Neighbor &p = pruned_pool[start];
+        Neighbor& p = pruned_pool[start];
         bool occlude = false;
         float dik = distance_->compare(data_bp_ + dimension_ * p.id, data_bp_ + dimension_ * src_node, dimension_);
         for (size_t t = 0; t < result.size(); ++t) {
@@ -1843,10 +1817,7 @@ uint32_t IndexBipartite::PruneProjectionCandidates(std::vector<Neighbor> &search
     return src_node;
 }
 
-void IndexBipartite::PruneProjectionBaseSearchCandidates(std::vector<Neighbor> &search_pool, const float *query,
-                                                         uint32_t qid, const Parameters &parameters,
-                                                         std::vector<uint32_t> &pruned_list) {
-
+void IndexBipartite::PruneProjectionBaseSearchCandidates(std::vector<Neighbor>& search_pool, const float* query, uint32_t qid, const Parameters& parameters, std::vector<uint32_t>& pruned_list) {
     uint32_t M_pjbp = parameters.Get<uint32_t>("M_pjbp");
     uint32_t degree = M_pjbp;
     std::vector<uint32_t> result;
@@ -1858,14 +1829,14 @@ void IndexBipartite::PruneProjectionBaseSearchCandidates(std::vector<Neighbor> &
     if (search_pool[start].id == qid) {
         start++;
     }
-    auto &src_nbrs = projection_graph_[qid];
+    auto& src_nbrs = projection_graph_[qid];
     while (std::find(src_nbrs.begin(), src_nbrs.end(), search_pool[start].id) != src_nbrs.end()) {
         ++start;
     }
     result.push_back(search_pool[start].id);
     // ++start;
     while (result.size() < M_pjbp && (++start) < search_pool.size()) {
-        Neighbor &p = search_pool[start];
+        Neighbor& p = search_pool[start];
         bool occlude = false;
         for (size_t t = 0; t < result.size(); ++t) {
             if (p.id == result[t]) {
@@ -1895,7 +1866,7 @@ void IndexBipartite::PruneProjectionBaseSearchCandidates(std::vector<Neighbor> &
     }
     start = 0;
     while (result.size() < M_pjbp && (++start) < search_pool.size()) {
-        Neighbor &p = search_pool[start];
+        Neighbor& p = search_pool[start];
         bool occlude = false;
         for (size_t t = 0; t < result.size(); ++t) {
             if (p.id == result[t]) {
@@ -1939,9 +1910,7 @@ void IndexBipartite::PruneProjectionBaseSearchCandidates(std::vector<Neighbor> &
     pruned_list = result;
 }
 
-void IndexBipartite::SearchProjectionbyQuery(const float *query, const Parameters &parameters,
-                                             NeighborPriorityQueue &search_pool, boost::dynamic_bitset<> &visited,
-                                             std::vector<Neighbor> &full_retset) {
+void IndexBipartite::SearchProjectionbyQuery(const float* query, const Parameters& parameters, NeighborPriorityQueue& search_pool, boost::dynamic_bitset<>& visited, std::vector<Neighbor>& full_retset) {
     uint32_t M_pjbp = parameters.Get<uint32_t>("M_pjbp");
 
     std::random_device rd;
@@ -2002,7 +1971,7 @@ void IndexBipartite::SearchProjectionbyQuery(const float *query, const Parameter
 }
 
 void IndexBipartite::CalculateProjectionep() {
-    float *center = new float[dimension_]();
+    float* center = new float[dimension_]();
     memset(center, 0, sizeof(float) * dimension_);
     // calculate centroid in base point
     for (size_t i = 0; i < nd_; ++i) {
@@ -2015,11 +1984,11 @@ void IndexBipartite::CalculateProjectionep() {
         center[d] /= (float)nd_;
     }
 
-    float *distances = new float[nd_]();
+    float* distances = new float[nd_]();
     memset(distances, 0, sizeof(float) * nd_);
 #pragma omp parallel for
     for (size_t i = 0; i < nd_; ++i) {
-        const float *cur_data = data_bp_ + i * dimension_;
+        const float* cur_data = data_bp_ + i * dimension_;
         float diff = 0;
         for (size_t j = 0; j < dimension_; ++j) {
             diff += ((center[j] - cur_data[j]) * (center[j] - cur_data[j]));
@@ -2040,43 +2009,43 @@ void IndexBipartite::CalculateProjectionep() {
     delete[] distances;
 }
 
-void IndexBipartite::Build(size_t n, const float *data, const Parameters &parameters){};
+void IndexBipartite::Build(size_t n, const float* data, const Parameters& parameters) {};
 
-void IndexBipartite::Save(const char *filename) {
+void IndexBipartite::Save(const char* filename) {
     // write graph
     std::ofstream out(filename, std::ios::binary | std::ios::out);
     uint32_t npts = static_cast<uint32_t>(total_pts_);
-    out.write((char *)&npts, sizeof(npts));
+    out.write((char*)&npts, sizeof(npts));
     for (uint32_t i = 0; i < total_pts_; i++) {
         uint32_t nbr_size = static_cast<uint32_t>(bipartite_graph_[i].size());
-        out.write((char *)&nbr_size, sizeof(nbr_size));
-        out.write((char *)bipartite_graph_[i].data(), nbr_size * sizeof(uint32_t));
+        out.write((char*)&nbr_size, sizeof(nbr_size));
+        out.write((char*)bipartite_graph_[i].data(), nbr_size * sizeof(uint32_t));
     }
     out.close();
 }
 
-void IndexBipartite::Load(const char *filename) {
+void IndexBipartite::Load(const char* filename) {
     // load graph to bipartite_graph
     std::ifstream in(filename, std::ios::binary);
     uint32_t npts;
-    in.read((char *)&npts, sizeof(npts));
+    in.read((char*)&npts, sizeof(npts));
     bipartite_graph_.resize(npts);
     for (uint32_t i = 0; i < npts; i++) {
         uint32_t nbr_size;
-        in.read((char *)&nbr_size, sizeof(nbr_size));
+        in.read((char*)&nbr_size, sizeof(nbr_size));
         bipartite_graph_[i].resize(nbr_size);
-        in.read((char *)bipartite_graph_[i].data(), nbr_size * sizeof(uint32_t));
+        in.read((char*)bipartite_graph_[i].data(), nbr_size * sizeof(uint32_t));
     }
     in.close();
 }
 
-void IndexBipartite::LoadNsgGraph(const char *filename) {
+void IndexBipartite::LoadNsgGraph(const char* filename) {
     // load graph to projection graph
     std::ifstream in(filename, std::ios::binary);
     uint32_t width = 0;
-    in.read((char *)&width, sizeof(width));
+    in.read((char*)&width, sizeof(width));
     uint32_t npts = 1000000;
-    in.read((char *)&projection_ep_, sizeof(uint32_t));
+    in.read((char*)&projection_ep_, sizeof(uint32_t));
     std::cout << "Projection graph, "
               << "ep: " << projection_ep_ << std::endl;
     // in.read((char *)&npts, sizeof(npts));
@@ -2084,40 +2053,39 @@ void IndexBipartite::LoadNsgGraph(const char *filename) {
     float out_degree = 0.0;
     for (uint32_t i = 0; i < npts; i++) {
         uint32_t nbr_size;
-        in.read((char *)&nbr_size, sizeof(nbr_size));
+        in.read((char*)&nbr_size, sizeof(nbr_size));
         out_degree += static_cast<float>(nbr_size);
         projection_graph_[i].resize(nbr_size);
-        in.read((char *)projection_graph_[i].data(), nbr_size * sizeof(uint32_t));
+        in.read((char*)projection_graph_[i].data(), nbr_size * sizeof(uint32_t));
     }
     std::cout << "Projection graph, "
               << "avg_degree: " << out_degree / npts << std::endl;
     in.close();
 }
 
-void IndexBipartite::LoadProjectionGraph(const char *filename) {
+void IndexBipartite::LoadProjectionGraph(const char* filename) {
     // load graph to projection graph
     std::ifstream in(filename, std::ios::binary);
     uint32_t npts;
-    in.read((char *)&projection_ep_, sizeof(uint32_t));
+    in.read((char*)&projection_ep_, sizeof(uint32_t));
     std::cout << "Projection graph, "
               << "ep: " << projection_ep_ << std::endl;
-    in.read((char *)&npts, sizeof(npts));
+    in.read((char*)&npts, sizeof(npts));
     projection_graph_.resize(npts);
     float out_degree = 0.0;
     for (uint32_t i = 0; i < npts; i++) {
         uint32_t nbr_size;
-        in.read((char *)&nbr_size, sizeof(nbr_size));
+        in.read((char*)&nbr_size, sizeof(nbr_size));
         out_degree += static_cast<float>(nbr_size);
         projection_graph_[i].resize(nbr_size);
-        in.read((char *)projection_graph_[i].data(), nbr_size * sizeof(uint32_t));
+        in.read((char*)projection_graph_[i].data(), nbr_size * sizeof(uint32_t));
     }
     std::cout << "Projection graph, "
               << "avg_degree: " << out_degree / npts << std::endl;
     in.close();
 }
 
-uint32_t IndexBipartite::SearchBipartiteGraph(const float *query, size_t k, size_t &qid, const Parameters &parameters,
-                                              unsigned *indices) {
+uint32_t IndexBipartite::SearchBipartiteGraph(const float* query, size_t k, size_t& qid, const Parameters& parameters, unsigned* indices) {
     // uint32_t M_sq = parameters.Get<uint32_t>("M_sq");
     uint32_t L_pq = parameters.Get<uint32_t>("L_pq");
     NeighborPriorityQueue search_queue(L_pq);
@@ -2132,7 +2100,7 @@ uint32_t IndexBipartite::SearchBipartiteGraph(const float *query, size_t k, size
     boost::dynamic_bitset<> visited{total_pts_, 0};
     // std::bitset<bsize> visited;
     // block_metric.record();
-    for (auto &id : init_ids) {
+    for (auto& id : init_ids) {
         float distance;
         // dist_cmp_metric.reset();
         distance = distance_->compare(data_bp_ + id * dimension_, query, (unsigned)dimension_);
@@ -2190,7 +2158,7 @@ uint32_t IndexBipartite::SearchBipartiteGraph(const float *query, size_t k, size
             }
         }
 
-        for (auto &ns_nbr : bipartite_graph_[first_hop_rank_1]) {
+        for (auto& ns_nbr : bipartite_graph_[first_hop_rank_1]) {
             if (visited.test(ns_nbr)) {
                 continue;
             }
@@ -2222,8 +2190,7 @@ uint32_t IndexBipartite::SearchBipartiteGraph(const float *query, size_t k, size
     }
     return cmps;
 }
-void IndexBipartite::Search(const float *query, const float *x, size_t k, const Parameters &parameters,
-                            unsigned *indices, float* res_dists) {
+void IndexBipartite::Search(const float* query, const float* x, size_t k, const Parameters& parameters, unsigned* indices, float* res_dists) {
     // uint32_t M_sq = parameters.Get<uint32_t>("M_sq");
     uint32_t L_pq = parameters.Get<uint32_t>("L_pq");
     NeighborPriorityQueue search_queue(L_pq);
@@ -2238,7 +2205,7 @@ void IndexBipartite::Search(const float *query, const float *x, size_t k, const 
     boost::dynamic_bitset<> visited{total_pts_, 0};
     // std::bitset<bsize> visited;
     // block_metric.record();
-    for (auto &id : init_ids) {
+    for (auto& id : init_ids) {
         float distance;
         // dist_cmp_metric.reset();
         distance = distance_->compare(data_bp_ + id * dimension_, query, (unsigned)dimension_);
@@ -2266,9 +2233,9 @@ void IndexBipartite::Search(const float *query, const float *x, size_t k, const 
         uint32_t first_hop_rank_1 = bipartite_graph_[cur_id][0];
         float first_hop_min_dist = 1000;
         // get neighbors' neighbors, first
-        for (auto &nbr : bipartite_graph_[cur_id]) {  // current check node's neighbors
+        for (auto& nbr : bipartite_graph_[cur_id]) {  // current check node's neighbors
 
-            for (auto &ns_nbr : bipartite_graph_[nbr]) {  // neighbors' neighbors
+            for (auto& ns_nbr : bipartite_graph_[nbr]) {  // neighbors' neighbors
                 // memory_access_metric.reset();
                 if (visited.test(ns_nbr)) {
                     continue;
@@ -2308,8 +2275,7 @@ void IndexBipartite::Search(const float *query, const float *x, size_t k, const 
     }
 }
 
-std::pair<uint32_t, uint32_t> IndexBipartite::SearchRoarGraph(const float *query, size_t k, size_t &qid, const Parameters &parameters,
-                                               unsigned *indices, std::vector<float>& res_dists) {
+std::pair<uint32_t, uint32_t> IndexBipartite::SearchRoarGraph(const float* query, size_t k, size_t& qid, const Parameters& parameters, unsigned* indices, std::vector<float>& res_dists) {
     uint32_t L_pq = parameters.Get<uint32_t>("L_pq");
     NeighborPriorityQueue search_queue(L_pq);
     // search_queue.reserve(L_pq);
@@ -2321,7 +2287,7 @@ std::pair<uint32_t, uint32_t> IndexBipartite::SearchRoarGraph(const float *query
     // projection_ep_ = start;
     std::vector<uint32_t> init_ids;
     init_ids.push_back(projection_ep_);
-    prefetch_vector((char *)(data_bp_ + projection_ep_ * dimension_), dimension_);
+    prefetch_vector((char*)(data_bp_ + projection_ep_ * dimension_), dimension_);
     // init_ids.push_back(projection_ep_);
     // _mm_prefetch((char *)data_bp_ + projection_ep_ * dimension_, _MM_HINT_T0);
     // init_ids.push_back(dis(gen));
@@ -2330,12 +2296,11 @@ std::pair<uint32_t, uint32_t> IndexBipartite::SearchRoarGraph(const float *query
     // tsl::robin_set<uint32_t> visited(5000);
     // std::bitset<bsize> visited;
     // block_metric.record();
-    VisitedList *vl = visited_list_pool_->getFreeVisitedList();
-    vl_type *visited_array = vl->mass;
+    VisitedList* vl = visited_list_pool_->getFreeVisitedList();
+    vl_type* visited_array = vl->mass;
     vl_type visited_array_tag = vl->curV;
 
-    for (auto &id : init_ids) {
-
+    for (auto& id : init_ids) {
         // dist_cmp_metric.reset();
         float distance = distance_->compare(data_bp_ + id * dimension_, query, (unsigned)dimension_);
         // if (metric_ == efanna2e::Metric::INNER_PRODUCT) {
@@ -2358,7 +2323,7 @@ std::pair<uint32_t, uint32_t> IndexBipartite::SearchRoarGraph(const float *query
         auto cur_check_node = search_queue.closest_unexpanded();
         auto cur_id = cur_check_node.id;
         // visited.set(cur_id);
-        uint32_t *cur_nbrs = projection_graph_[cur_id].data();
+        uint32_t* cur_nbrs = projection_graph_[cur_id].data();
         // memory_access_metric.record();
         // _mm_prefetch((char *)(visited_array + *(cur_nbrs + 1)), _MM_HINT_T0);
         // _mm_prefetch((char *)(data_bp_ + *(cur_nbrs) * dimension_), _MM_HINT_T0);
@@ -2371,8 +2336,8 @@ std::pair<uint32_t, uint32_t> IndexBipartite::SearchRoarGraph(const float *query
             // if (visited.find(nbr) != visited.end()) {
             // _mm_prefetch((char *)(visited_array + *(cur_nbrs + j)), _MM_HINT_T0);
             // if (j + 1 <= projection_graph_[cur_id].size()) {
-            _mm_prefetch((char *)(visited_array + *(cur_nbrs + j + 1)), _MM_HINT_T0);
-            _mm_prefetch((char *)(data_bp_ + *(cur_nbrs + j + 1) * dimension_), _MM_HINT_T0);
+            _mm_prefetch((char*)(visited_array + *(cur_nbrs + j + 1)), _MM_HINT_T0);
+            _mm_prefetch((char*)(data_bp_ + *(cur_nbrs + j + 1) * dimension_), _MM_HINT_T0);
             // }
             // _mm_prefetch((char *)(data_bp_ + *(cur_nbrs + j) * dimension_), _MM_HINT_T0);
             if (visited_array[nbr] != visited_array_tag) {
@@ -2518,7 +2483,7 @@ std::pair<uint32_t, uint32_t> IndexBipartite::SearchRoarGraph(const float *query
 //     return cmps;
 // }
 
-void IndexBipartite::findroot(boost::dynamic_bitset<> &flag, unsigned &root, const Parameters &parameters) {
+void IndexBipartite::findroot(boost::dynamic_bitset<>& flag, unsigned& root, const Parameters& parameters) {
     unsigned id = nd_;
     for (unsigned i = 0; i < nd_; i++) {
         if (flag[i] == false) {
@@ -2527,7 +2492,8 @@ void IndexBipartite::findroot(boost::dynamic_bitset<> &flag, unsigned &root, con
         }
     }
 
-    if (id == nd_) return;  // No Unlinked Node
+    if (id == nd_)
+        return;  // No Unlinked Node
 
     std::vector<Neighbor> tmp, pool;
     NeighborPriorityQueue temp_queue;
@@ -2556,11 +2522,12 @@ void IndexBipartite::findroot(boost::dynamic_bitset<> &flag, unsigned &root, con
     projection_graph_[root].push_back(id);
 }
 
-void IndexBipartite::dfs(boost::dynamic_bitset<> &flag, unsigned root, unsigned &cnt) {
+void IndexBipartite::dfs(boost::dynamic_bitset<>& flag, unsigned root, unsigned& cnt) {
     unsigned tmp = root;
     std::stack<unsigned> s;
     s.push(root);
-    if (!flag[root]) cnt++;
+    if (!flag[root])
+        cnt++;
     flag[root] = true;
     while (!s.empty()) {
         unsigned next = nd_ + 1;
@@ -2573,7 +2540,8 @@ void IndexBipartite::dfs(boost::dynamic_bitset<> &flag, unsigned root, unsigned 
         // std::cout << next <<":"<<cnt <<":"<<tmp <<":"<<s.size()<< '\n';
         if (next == (nd_ + 1)) {
             s.pop();
-            if (s.empty()) break;
+            if (s.empty())
+                break;
             tmp = s.top();
             continue;
         }
@@ -2584,14 +2552,15 @@ void IndexBipartite::dfs(boost::dynamic_bitset<> &flag, unsigned root, unsigned 
     }
 }
 
-void IndexBipartite::CollectPoints(const Parameters &parameters) {
+void IndexBipartite::CollectPoints(const Parameters& parameters) {
     unsigned root = projection_ep_;
     boost::dynamic_bitset<> flags{nd_, 0};
     unsigned unlinked_cnt = 0;
     while (unlinked_cnt < nd_) {
         dfs(flags, root, unlinked_cnt);
         // std::cout << unlinked_cnt << '\n';
-        if (unlinked_cnt >= nd_) break;
+        if (unlinked_cnt >= nd_)
+            break;
         findroot(flags, root, parameters);
         // std::cout << "new root"
         //           << ":" << root << '\n';
@@ -2603,34 +2572,34 @@ void IndexBipartite::CollectPoints(const Parameters &parameters) {
     // }
 }
 
-void IndexBipartite::SaveProjectionGraph(const char *filename) {
+void IndexBipartite::SaveProjectionGraph(const char* filename) {
     std::ofstream out(filename, std::ios::binary | std::ios::out);
     if (!out.is_open()) {
         throw std::runtime_error("cannot open file");
     }
-    out.write((char *)&projection_ep_, sizeof(uint32_t));
-    out.write((char *)&u32_nd_, sizeof(uint32_t));
+    out.write((char*)&projection_ep_, sizeof(uint32_t));
+    out.write((char*)&u32_nd_, sizeof(uint32_t));
     for (uint32_t i = 0; i < u32_nd_; ++i) {
         uint32_t nbr_size = projection_graph_[i].size();
-        out.write((char *)&nbr_size, sizeof(uint32_t));
-        out.write((char *)projection_graph_[i].data(), sizeof(uint32_t) * nbr_size);
+        out.write((char*)&nbr_size, sizeof(uint32_t));
+        out.write((char*)projection_graph_[i].data(), sizeof(uint32_t) * nbr_size);
     }
     out.close();
 }
 
 // gt file: base in query
-void IndexBipartite::LoadLearnBaseKNN(const char *filename) {
+void IndexBipartite::LoadLearnBaseKNN(const char* filename) {
     std::ifstream in(filename, std::ios::binary);
     uint32_t npts;
     uint32_t k_dim;
-    in.read((char *)&npts, sizeof(npts));
-    in.read((char *)&(k_dim), sizeof(k_dim));
+    in.read((char*)&npts, sizeof(npts));
+    in.read((char*)&(k_dim), sizeof(k_dim));
     std::cout << "learn base knn npts: " << npts << ", k_dim: " << k_dim << std::endl;
 
     learn_base_knn_.resize(npts);
     for (uint32_t i = 0; i < npts; i++) {
         learn_base_knn_[i].resize(k_dim);
-        in.read((char *)learn_base_knn_[i].data(), sizeof(uint32_t) * k_dim);
+        in.read((char*)learn_base_knn_[i].data(), sizeof(uint32_t) * k_dim);
     }
     if (learn_base_knn_.back().size() != k_dim) {
         throw std::runtime_error("learn base knn file error");
@@ -2638,18 +2607,18 @@ void IndexBipartite::LoadLearnBaseKNN(const char *filename) {
     in.close();
 }
 
-void IndexBipartite::LoadBaseLearnKNN(const char *filename) {
+void IndexBipartite::LoadBaseLearnKNN(const char* filename) {
     std::ifstream in(filename, std::ios::binary);
     uint32_t npts;
     uint32_t k_dim;
-    in.read((char *)&npts, sizeof(npts));
-    in.read((char *)&(k_dim), sizeof(k_dim));
+    in.read((char*)&npts, sizeof(npts));
+    in.read((char*)&(k_dim), sizeof(k_dim));
     std::cout << "base learn knn npts: " << npts << ", k_dim: " << k_dim << std::endl;
 
     base_learn_knn_.resize(npts);
     for (uint32_t i = 0; i < npts; i++) {
         base_learn_knn_[i].resize(k_dim);
-        in.read((char *)base_learn_knn_[i].data(), sizeof(uint32_t) * k_dim);
+        in.read((char*)base_learn_knn_[i].data(), sizeof(uint32_t) * k_dim);
     }
     if (base_learn_knn_.back().size() != k_dim) {
         throw std::runtime_error("base learn knn file error");
@@ -2658,7 +2627,7 @@ void IndexBipartite::LoadBaseLearnKNN(const char *filename) {
 }
 
 // todo, if use projection search, only need base point data
-void IndexBipartite::LoadVectorData(const char *base_file, const char *sampled_query_file) {
+void IndexBipartite::LoadVectorData(const char* base_file, const char* sampled_query_file) {
     uint32_t base_num = 0, sq_num = 0, base_dim = 0, q_dim = 0;
 
     load_meta<float>(base_file, base_num, base_dim);
@@ -2668,8 +2637,8 @@ void IndexBipartite::LoadVectorData(const char *base_file, const char *sampled_q
             throw std::runtime_error("base and query dimension mismatch");
         }
     }
-    float *base_data = nullptr;
-    float *sampled_query_data = nullptr;
+    float* base_data = nullptr;
+    float* sampled_query_data = nullptr;
     load_data<float>(base_file, base_num, base_dim, base_data);
     // load_data<float>(sampled_query_file, sq_num, q_dim, sampled_query_data);
 
@@ -2689,6 +2658,118 @@ void IndexBipartite::LoadVectorData(const char *base_file, const char *sampled_q
     u32_nd_ = static_cast<uint32_t>(nd_);
     u32_nd_sq_ = static_cast<uint32_t>(nd_sq_);
     u32_total_pts_ = static_cast<uint32_t>(total_pts_);
+}
+
+std::pair<uint32_t, uint32_t> IndexBipartite::SearchGraphIDS(const float* query, size_t k, size_t& qid, const Parameters& parameters, unsigned* indices, std::vector<float>& res_dists, std::vector<uint32_t>& ids) {
+    uint32_t L_pq = parameters.Get<uint32_t>("L_pq");
+    NeighborPriorityQueue search_queue(L_pq);
+    // search_queue.reserve(L_pq);
+    // std::random_device rd;
+    // std::mt19937 gen(rd());
+    // std::uniform_int_distribution<uint32_t> dis(0, u32_nd_ - 1);
+    // uint32_t start = dis(gen);  // start is base
+    // uint32_t start = projection_ep_;
+    // projection_ep_ = start;
+    std::vector<uint32_t> init_ids;
+    init_ids.push_back(projection_ep_);
+    prefetch_vector((char*)(data_bp_ + projection_ep_ * dimension_), dimension_);
+    // init_ids.push_back(projection_ep_);
+    // _mm_prefetch((char *)data_bp_ + projection_ep_ * dimension_, _MM_HINT_T0);
+    // init_ids.push_back(dis(gen));
+    // block_metric.reset();
+    // boost::dynamic_bitset<> visited{u32_nd_, 0};
+    // tsl::robin_set<uint32_t> visited(5000);
+    // std::bitset<bsize> visited;
+    // block_metric.record();
+    VisitedList* vl = visited_list_pool_->getFreeVisitedList();
+    vl_type* visited_array = vl->mass;
+    vl_type visited_array_tag = vl->curV;
+
+    for (auto& id : init_ids) {
+        // dist_cmp_metric.reset();
+        float distance = distance_->compare(data_bp_ + id * dimension_, query, (unsigned)dimension_);
+        // if (metric_ == efanna2e::Metric::INNER_PRODUCT) {
+        //     distance = -distance;
+        // }
+        // dist_cmp_metric.record();
+
+        // memory_access_metric.reset();
+        Neighbor nn = Neighbor(id, distance, false);
+        search_queue.insert(nn);
+        // visited_array[id] = visited_array_tag;
+        // visited.set(id);
+        // visited.insert(id);
+        // memory_access_metric.record();
+    }
+    uint32_t cmps = 0;
+    uint32_t hops = 0;
+    while (search_queue.has_unexpanded_node()) {
+        // memory_access_metric.reset();
+        auto cur_check_node = search_queue.closest_unexpanded();
+        auto cur_id = cur_check_node.id;
+
+        ids.push_back(cur_id);
+
+        // visited.set(cur_id);
+        uint32_t* cur_nbrs = projection_graph_[cur_id].data();
+        // memory_access_metric.record();
+        // _mm_prefetch((char *)(visited_array + *(cur_nbrs + 1)), _MM_HINT_T0);
+        // _mm_prefetch((char *)(data_bp_ + *(cur_nbrs) * dimension_), _MM_HINT_T0);
+
+        ++hops;
+        // get neighbors' neighbors, first
+        for (size_t j = 0; j < projection_graph_[cur_id].size(); ++j) {  // current check node's neighbors
+            uint32_t nbr = *(cur_nbrs + j);
+            // memory_access_metric.reset();
+            // if (visited.find(nbr) != visited.end()) {
+            // _mm_prefetch((char *)(visited_array + *(cur_nbrs + j)), _MM_HINT_T0);
+            // if (j + 1 <= projection_graph_[cur_id].size()) {
+            _mm_prefetch((char*)(visited_array + *(cur_nbrs + j + 1)), _MM_HINT_T0);
+            _mm_prefetch((char*)(data_bp_ + *(cur_nbrs + j + 1) * dimension_), _MM_HINT_T0);
+            // }
+            // _mm_prefetch((char *)(data_bp_ + *(cur_nbrs + j) * dimension_), _MM_HINT_T0);
+            if (visited_array[nbr] != visited_array_tag) {
+                // if (visited.test(nbr)) {
+                //     continue;
+                // }
+                // prefetch_vector((char *)(data_bp_ + nbr * dimension_), dimension_);
+                // visited.insert(nbr);
+                // visited.set(nbr);
+                visited_array[nbr] = visited_array_tag;
+                // memory_access_metric.record();
+                float distance = distance_->compare(data_bp_ + nbr * dimension_, query, (unsigned)dimension_);
+                // _mm_prefetch((char *) data_bp_ + )
+                // dist_cmp_metric.reset();
+                // if (likely(metric_ == efanna2e::INNER_PRODUCT)) {
+                //     distance = -distance;
+                // }
+
+                // dist_cmp_metric.record();
+                // memory_access_metric.reset();
+
+                ++cmps;
+                search_queue.insert({nbr, distance, false});
+                // if(search_queue.insert({nbr, distance, false})) {
+                //     _mm_prefetch((char *)projection_graph_[nbr].data(), _MM_HINT_T2);
+                // }
+                // memory_access_metric.record();
+            }
+        }
+    }
+    visited_list_pool_->releaseVisitedList(vl);
+
+    if (unlikely(search_queue.size() < k)) {
+        std::stringstream ss;
+        ss << "not enough results: " << search_queue.size() << ", expected: " << k;
+        throw std::runtime_error(ss.str());
+    }
+
+    for (size_t i = 0; i < k; ++i) {
+        // indices[qid * k + i] = search_queue[i].id;
+        indices[i] = search_queue[i].id;
+        res_dists[i] = search_queue[i].distance;
+    }
+    return std::make_pair(cmps, hops);
 }
 
 }  // namespace efanna2e

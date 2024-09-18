@@ -25,6 +25,3 @@ target_link_libraries(test_only_build_bipartite ${GTEST_LIBRARIES} pthread ${PRO
 
 add_executable(test_search_bipartite test_search_bipartite.cpp)
 target_link_libraries(test_search_bipartite ${GTEST_LIBRARIES} pthread ${PROJECT_NAME}  Boost::program_options)
-
-add_executable(test_match test_match.cpp)
-target_link_libraries(test_match ${GTEST_LIBRARIES} pthread ${PROJECT_NAME}  Boost::program_options)
