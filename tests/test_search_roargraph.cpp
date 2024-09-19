@@ -227,8 +227,9 @@ int main(int argc, char** argv) {
         }
         // 将内容写入文件
         for (const auto& innerVector : paths) {
-            for (const auto& value : innerVector) {
-                outFile << value << ",";  // 用空格分隔
+            for (uint32_t iter = 0; iter < innerVector.size(); ++iter) {
+                outFile << innerVector[iter];
+                if (iter != innerVector.size() - 1) outFile << ",";  // 用空格分隔
             }
             outFile << std::endl;  // 每个子向量后换行
         }

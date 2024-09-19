@@ -2688,6 +2688,7 @@ std::pair<uint32_t, uint32_t> IndexBipartite::SearchGraphIDS(const float* query,
     for (auto& id : init_ids) {
         // dist_cmp_metric.reset();
         float distance = distance_->compare(data_bp_ + id * dimension_, query, (unsigned)dimension_);
+        ids.push_back(id);
         // if (metric_ == efanna2e::Metric::INNER_PRODUCT) {
         //     distance = -distance;
         // }
@@ -2707,8 +2708,6 @@ std::pair<uint32_t, uint32_t> IndexBipartite::SearchGraphIDS(const float* query,
         // memory_access_metric.reset();
         auto cur_check_node = search_queue.closest_unexpanded();
         auto cur_id = cur_check_node.id;
-
-        ids.push_back(cur_id);
 
         // visited.set(cur_id);
         uint32_t* cur_nbrs = projection_graph_[cur_id].data();
@@ -2738,6 +2737,8 @@ std::pair<uint32_t, uint32_t> IndexBipartite::SearchGraphIDS(const float* query,
                 visited_array[nbr] = visited_array_tag;
                 // memory_access_metric.record();
                 float distance = distance_->compare(data_bp_ + nbr * dimension_, query, (unsigned)dimension_);
+                ids.push_back(nbr);
+
                 // _mm_prefetch((char *) data_bp_ + )
                 // dist_cmp_metric.reset();
                 // if (likely(metric_ == efanna2e::INNER_PRODUCT)) {
