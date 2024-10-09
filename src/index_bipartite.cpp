@@ -1164,7 +1164,7 @@ void IndexBipartite::LinkProjection(const Parameters& parameters) {
     std::cout << "After projection, min degree of projection graph: " << min_degree << std::endl;
 
     std::cout << std::endl;
-
+    return;//   get bipartite
     for (size_t i = 0; i < projection_graph_.size(); ++i) {
         // projection_graph_[i].clear();
         supply_nbrs_[i] = projection_graph_[i];

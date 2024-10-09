@@ -76,6 +76,7 @@ int main(int argc, char** argv) {
     uint32_t num_threads;
     uint32_t k;
     std::string evaluation_save_path = "";
+    uint32_t ep_point;
 
     po::options_description desc{"Arguments"};
     try {
@@ -104,7 +105,8 @@ int main(int argc, char** argv) {
         desc.add_options()("num_threads,T", po::value<uint32_t>(&num_threads)->default_value(omp_get_num_procs()),
                            "Number of threads used for building index (defaults to "
                            "omp_get_num_procs())");
-
+        desc.add_options()("ep_point", po::value<uint32_t>(&ep_point)->default_value(-1),
+                           "if you need point searching ep, use it");
         po::variables_map vm;
         po::store(po::parse_command_line(argc, argv, desc), vm);
         if (vm.count("help")) {
@@ -165,6 +167,11 @@ int main(int argc, char** argv) {
     std::cout << "Load graph index: " << projection_index_save_file << std::endl;
     index.LoadProjectionGraph(projection_index_save_file.c_str());
 
+    if (ep_point != -1) {
+        index.setEnterPoint(ep_point);
+        std::cout << "Search graph from: " << ep_point << std::endl;    
+    }
+
     if (index.need_normalize) {
         std::cout << "Normalizing query data" << std::endl;
         for (uint32_t i = 0; i < q_pts; i++) {
@@ -209,16 +216,16 @@ int main(int argc, char** argv) {
 #pragma omp parallel for schedule(dynamic, 1)
         for (size_t i = 0; i < q_pts; ++i) {
             std::vector<uint32_t> ids;
-            // auto ret_val = index.SearchRoarGraph(aligned_query_data + i * q_dim, k, i, parameters, res + i * k, res_dists[i]);
-            auto ret_val = index.SearchGraphIDS(aligned_query_data + i * q_dim, k, i, parameters, res + i * k, res_dists[i], ids);  // new add
-            std::vector<uint32_t>().swap(paths[i]);  // new add
-            paths[i].swap(ids); // new add
+            auto ret_val = index.SearchRoarGraph(aligned_query_data + i * q_dim, k, i, parameters, res + i * k, res_dists[i]);
+            //auto ret_val = index.SearchGraphIDS(aligned_query_data + i * q_dim, k, i, parameters, res + i * k, res_dists[i], ids);  // new add
+            //std::vector<uint32_t>().swap(paths[i]);  // new add
+            //paths[i].swap(ids); // new add
             projection_cmps_vec[i] = ret_val.first;
             hops_vec[i] = ret_val.second;
         }
         auto end = std::chrono::high_resolution_clock::now();
 
-        std::string filePath = "/root/pytest/data/t2i/paths_output_" + std::to_string(L_pq) + ".csv";
+        /*std::string filePath = "/root/pytest/data/t2i/paths_output_" + std::to_string(L_pq) + ".csv";
         std::ofstream outFile(filePath, std::ios::out);  // new add
         // 检查文件是否成功打开
         if (!outFile) {
@@ -235,7 +242,7 @@ int main(int argc, char** argv) {
         }
         // 关闭文件
         outFile.close();
-        std::cout << "数据写入" << filePath << "文件成功！" << std::endl;  // new add
+        std::cout << "数据写入" << filePath << "文件成功！" << std::endl;  // new add*/
 
         auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
         float qps = (float)q_pts / ((float)diff / 1000.0);

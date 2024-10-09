@@ -117,6 +117,10 @@ class IndexBipartite : public Index {
 
     std::pair<uint32_t, uint32_t> SearchBipartiteGraph(const float* query, size_t k, size_t& qid, const Parameters& parameters, unsigned* indices, std::vector<float>& dists);
 
+    void setEnterPoint(uint32_t ep) {
+        projection_ep_ = ep;
+    };
+
     Index* initializer_;
     TimeMetric dist_cmp_metric;
     TimeMetric memory_access_metric;
